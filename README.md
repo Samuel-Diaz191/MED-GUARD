@@ -2,7 +2,7 @@
 
 **Course:** EEL 4775 Real-Time Systems — Final Integration Capstone
 **Wokwi project:** [Diaz-FINAL-RTS26Summer](https://wokwi.com/projects/470273216543239169)
-**Portfolio site:** [PASTE YOUR GITHUB PAGES URL HERE — `https://<username>.github.io/<repo>`]
+**Portfolio site:** [https://samuel-diaz191.github.io/MED-GUARD/](https://samuel-diaz191.github.io/MED-GUARD/)
 
 ## One sentence
 
@@ -139,13 +139,29 @@ a cold start.
 
 | Task | Period T | WCET C | U=C/T | Priority | Deadline |
 |---|---:|---:|---:|---:|---:|
-| `ecg_sample` (producer) | 50 ms | *[fill in]* | *[fill in]* | 8 | 50 ms |
-| `arrhythmia_decision` (consumer) | event-driven | *[fill in]* | — | 8 | — |
-| `cycle_coordinator` | event-driven | *[fill in]* | — | 9 | — |
-| `alert` (responder) | event-driven | *[fill in]* | — | 12 | — |
+| `ecg_sample` (producer) | 50 ms | 45 us | 0.0009 | 8 | 50 ms |
+| `arrhythmia_decision` (consumer) | event-driven | 54934 us | — | 8 | — |
+| `cycle_coordinator` | event-driven | 43435 us | — | 9 | — |
+| `alert` (responder) | event-driven | 57331 us | — | 12 | — |
 
-Total utilization U = *[fill in]* (only `ecg_sample` has a true fixed period; see
-`docs/task-table.md` for the fuller schedulability discussion for the event-driven tasks).
+Total utilization U = 0.0009 for `ecg_sample` (the only task with a true fixed period —
+see `docs/task-table.md` for the fuller schedulability discussion for the event-driven
+tasks). `ecg_sample`'s own timing is extremely lightweight and well-bounded (33 us mean,
+35 us max) — it's essentially just generating a value and enqueueing it.
+
+**A real finding worth noting:** the other three tasks all show a large gap between
+their mean and max execution time — `arrhythmia_decision` is ~15.6x (2712 us mean vs.
+42257 us max), `cycle_coordinator` is ~8.4x (3966 us vs. 33412 us), and `alert` is
+~10.5x (4193 us vs. 44101 us). This consistent pattern across three otherwise-simple
+tasks points to a shared cause rather than three unrelated coincidences: all three call
+`ESP_LOGI`/`ESP_LOGW`/`ESP_LOGE` inside their measured `MEASURE_WCET` block, and UART
+log output can block for a variable, sometimes-long duration if the serial monitor
+isn't draining the TX buffer fast enough. In a real deployment, this would be a genuine
+concern — a task's *worst-case* timing being 8-15x its typical case, driven by a logging
+call, is exactly the kind of thing WCET analysis is supposed to catch before it becomes
+a missed deadline. A production fix would move logging out of the timed critical path
+(e.g., queue log messages to a separate low-priority logger task) rather than call
+blocking UART output from inside a time-sensitive task.
 
 ## Hazard analysis & standard mapping
 
@@ -170,7 +186,7 @@ climb while `ecg_sample`'s heartbeat keeps incrementing normally.
 
 ## Build & run
 
-1. Open the Wokwi project (`<LASTNAME>-FINAL-RTS26Summer`) or clone `firmware/` locally with the ESP-IDF toolchain targeting ESP32-S3.
+1. Open the Wokwi project (`Diaz-FINAL-RTS26Summer`) or clone `firmware/` locally with the ESP-IDF toolchain targeting ESP32-S3.
 2. Default build (`USE_WEBSERVER 0`) runs entirely in Wokwi with no Wi-Fi — serial monitor prints queue depth, event bits, heartbeats, and the WCET evidence table once a second.
 3. To try the web monitor, set `USE_WEBSERVER 1`, fill in real `WIFI_SSID` / `WIFI_PASS` values, and rebuild — requires actual Wi-Fi hardware/credentials, not available in the Wokwi simulator.
 4. Press the "PATIENT ALERT" button to trigger the manual alert path and the App 3 latency benchmark; watch for the blue (WCET heartbeat) and red (arrhythmia alert) LEDs.
