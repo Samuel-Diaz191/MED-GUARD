@@ -272,5 +272,5 @@ fold-ins from prior apps. Specifically, Claude helped:
   concurrency sequence diagram, and this README's structure.
 
 The latency measurements and debounce finding documented above are from my own Wokwi
-run, as required — Claude did not generate or fabricate those numbers, and the WCET
-table above still needs my own run's real values filled in.
+run, as required — Claude did not generate or fabricate those numbers as well for the WCET
+table.
