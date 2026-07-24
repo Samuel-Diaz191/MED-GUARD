@@ -195,4 +195,29 @@ inside them already sat safely inside a function call's own parentheses (e.g.
 
 ## AI usage disclosure
 
-I used Claude (Anthropic) to help implement the producer/consumer/coordinator/responder task bodies, theme the pipeline around a medical ECG monitoring scenario, size the queue and defend the back-pressure policy, draft the web monitor's Wi-Fi/HTTP code (adapted from App 1's pattern per the assignment's explicit allowance), fold in App 2's WCET measurement macro across all four tasks, diagnose and fix a real compile error caused by a struct initializer's comma being misread inside the `MEASURE_WCET` macro argument, add and debug the two status LEDs (including fixing a toggle-vs-pulse visual bug and keeping the red LED's pulse outside the WCET timing block to avoid corrupting that data), and produce the sequence diagram and this README's structure. The latency measurements in Section 5 are from my own Wokwi run, as required — Claude did not generate or fabricate those numbers, and the WCET table above still needs my own run's real values filled in.
+I used Claude (Anthropic) throughout this project, on **App 5 itself** as well as the
+fold-ins from prior apps. Specifically, Claude helped:
+
+- Implement **App 5**'s core pipeline — the `ecg_sample_task` (producer),
+  `arrhythmia_decision_task` (consumer), `cycle_coordinator_task`, and `alert_task`
+  (responder) task bodies, the queue/event-group/notification wiring between them, the
+  medical ECG theme, the queue sizing math, and the back-pressure policy defense.
+- Add and debug the two status LEDs on **App 5** (including fixing a toggle-vs-pulse
+  visual bug and keeping the red LED's pulse outside the WCET timing block to avoid
+  corrupting that data).
+- Fold in and adapt **App 1**'s web monitor Wi-Fi/HTTP server pattern into App 5's
+  `webmonitor_task`, per the assignment's explicit allowance to reuse this
+  infrastructure.
+- Fold in **App 2**'s `MEASURE_WCET` macro and mean/max/WCET+30% reporting pattern
+  across all four App 5 tasks, and diagnose/fix a real compile error this introduced
+  (a struct initializer's comma being misread inside the macro argument).
+- Fold in **App 3**'s `button_isr` / `btn_task_sem` / `btn_task_notif` dual-fire
+  latency-benchmark pattern into App 5, to produce the measured notification-vs-semaphore
+  comparison in this README.
+- Build the capstone-level deliverables: the GitHub Pages portfolio site (`index.html`,
+  the system architecture diagram, the hazard analysis and task-table documents), the
+  concurrency sequence diagram, and this README's structure.
+
+The latency measurements and debounce finding documented above are from my own Wokwi
+run, as required — Claude did not generate or fabricate those numbers, and the WCET
+table above still needs my own run's real values filled in.
