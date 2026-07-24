@@ -260,6 +260,11 @@
     padding: 20px;
   }
 
+  .video-frame.has-video {
+    border-style: solid;
+    padding: 0;
+  }
+
   footer {
     padding: 40px 0 60px;
     color: var(--muted);
@@ -357,7 +362,7 @@
     <div class="panel">
       <table class="data">
         <thead>
-          <tr><th>Task</th><th>Prio</th><th>Trigger</th><th>Mean (µs)</th><th>Max (µs)</th><th>WCET+30% (µs)</th></tr>
+          <tr><th>Task</th><th>Prio</th><th>Trigger</th><th>Mean (us)</th><th>Max (us)</th><th>WCET+30% (us)</th></tr>
         </thead>
         <tbody>
           <tr><td>ecg_sample</td><td>8</td><td>50 ms (20 Hz)</td><td>33</td><td>35</td><td>45</td></tr>
@@ -387,7 +392,7 @@
         <div class="h-mit">Mitigated by choosing direct task notification (fastest available primitive) and measuring, not assuming, its latency.</div>
       </div>
       <div class="hazard-item">
-        <div class="h-title">Button contact bounce was found to be under-filtered (200 µs, not ms)</div>
+        <div class="h-title">Button contact bounce was found to be under-filtered (200 us, not ms)</div>
         <div class="h-mit">Discovered via real benchmark data, documented rather than hidden, with a concrete fix recommended for hardware deployment.</div>
       </div>
     </div>
@@ -397,13 +402,12 @@
     <div class="sec-eyebrow">05 · Demo</div>
     <h2 class="sec-title">Demo video</h2>
     <p class="lede">3–5 minute walkthrough: theme, live demo, architecture + task table, induced-failure/degradation demonstration, and what's next.</p>
-    <div class="video-frame">
-      [ PASTE YOUR YOUTUBE OR WOKWI VIDEO EMBED HERE ]<br>
-      e.g. an &lt;iframe&gt; embed or a direct link once Part 3 is recorded
+    <div class="video-frame has-video">
+      <iframe width="100%" height="100%" src="https://www.youtube.com/embed/37ZBnvYzgKM" title="MedGuard demo video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="border-radius: 10px;"></iframe>
     </div>
   </section>
 
-  <section class="block" id="readme" style="border-bottom:none;">
+  <section class="block" id="readme">
     <div class="sec-eyebrow">06 · Documentation</div>
     <h2 class="sec-title">Full README</h2>
     <p class="lede">
@@ -412,6 +416,16 @@
       documented in-place), Core 0/1 rationale, and full AI-usage disclosure.
     </p>
     <a class="btn primary" href="https://github.com/Samuel-Diaz191/MED-GUARD/blob/main/README.md" target="_blank" rel="noopener">Read the full README ↗</a>
+  </section>
+
+  <section class="block" id="reflection" style="border-bottom:none;">
+    <div class="sec-eyebrow">07 · Reflection</div>
+    <h2 class="sec-title">Final reflection</h2>
+    <p class="lede">
+      What I'd do differently, what was harder than expected, and the most valuable thing
+      I learned building this — including the real bugs and dead ends along the way.
+    </p>
+    <a class="btn primary" href="https://github.com/Samuel-Diaz191/MED-GUARD/blob/main/final-reflection.md" target="_blank" rel="noopener">Read the final reflection ↗</a>
   </section>
 
 </div>
