@@ -13,7 +13,7 @@ device embedded firmware engineering** role.
 
 ## Demo
 
-- Video: [PASTE YOUR YOUTUBE / WOKWI VIDEO LINK HERE — Part 3]
+- Video: [https://youtu.be/37ZBnvYzgKM](https://youtu.be/37ZBnvYzgKM)
 - Live Wokwi: [Diaz-FINAL-RTS26Summer](https://wokwi.com/projects/470273216543239169)
 - Portfolio site: `docs/index.html` (this repo, served via GitHub Pages)
 
@@ -171,7 +171,7 @@ govern a real deployment (ISO 14971, IEC 62304, IEC 60601-1/-8). Highlights:
 
 - **Queue back-pressure** could discard a sample at the wrong instant → mitigated by depth sized to 2x worst-case burst, with drops surfaced via a monitor counter rather than silent.
 - **Slow alarm-delivery path** could delay a genuine arrhythmia alert → mitigated by choosing direct task notification (fastest available primitive) and measuring, not assuming, its latency.
-- **Button contact bounce** was found to be under-filtered (200 µs, not ms) → discovered via real benchmark data, documented rather than hidden, with a concrete fix recommended for hardware deployment.
+- **Button contact bounce** was found to be under-filtered (200 us, not ms) → discovered via real benchmark data, documented rather than hidden, with a concrete fix recommended for hardware deployment.
 
 ## Graceful degradation
 
