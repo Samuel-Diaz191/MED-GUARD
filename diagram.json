@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "author": "EEE 4775 scaffold - MedGuard theme",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-s3-devkitc-1",
+      "id": "esp",
+      "top": 0,
+      "left": 0,
+      "attrs": { "builder": "esp-idf" }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn_event",
+      "top": 179,
+      "left": -153.6,
+      "attrs": { "color": "blue", "label": "PATIENT ALERT" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led_wcet",
+      "top": -3.6,
+      "left": -149.8,
+      "attrs": { "color": "blue", "label": "WCET" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r_wcet",
+      "top": -43.75,
+      "left": 56.2,
+      "rotate": 180,
+      "attrs": { "value": "220" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led_alarm",
+      "top": 44.4,
+      "left": -149.8,
+      "attrs": { "color": "red", "label": "ALARM" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r_alarm",
+      "top": 109.85,
+      "left": -97.4,
+      "rotate": 180,
+      "attrs": { "value": "220" }
+    }
+  ],
+  "connections": [
+    [ "esp:TX", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX", "$serialMonitor:TX", "", [] ],
+    [ "btn_event:1.l", "esp:18", "blue", [ "v0" ] ],
+    [ "btn_event:2.r", "esp:GND.1", "black", [ "v10", "h-50" ] ],
+    [ "esp:2", "r_wcet:1", "blue", [ "h-20" ] ],
+    [ "r_wcet:2", "led_wcet:A", "blue", [ "h-114", "v76.8" ] ],
+    [ "led_wcet:C", "esp:GND.2", "black", [ "h-47.6", "v288", "h336", "v-297.42" ] ],
+    [ "esp:4", "r_alarm:1", "red", [ "h-20" ] ],
+    [ "r_alarm:2", "led_alarm:A", "red", [ "h-10" ] ],
+    [ "led_alarm:C", "esp:GND.2", "black", [ "h-38", "v172.8", "h316.8", "v-259.02" ] ]
+  ],
+  "serialMonitor": { "display": "terminal" },
+  "dependencies": {}
+}
