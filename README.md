@@ -15,12 +15,12 @@ device embedded firmware engineering** role.
 
 - Video: [https://youtu.be/37ZBnvYzgKM](https://youtu.be/37ZBnvYzgKM)
 - Live Wokwi: [Diaz-FINAL-RTS26Summer](https://wokwi.com/projects/470273216543239169)
-- Portfolio site: `docs/index.html` (this repo, served via GitHub Pages)
+- Portfolio site: `index.html` (this repo, served via GitHub Pages)
 
 ## Architecture
 
 MedGuard simulates a bedside ECG patient monitor on an ESP32-S3, running a dual-core
-FreeRTOS pipeline. Full diagram: [`docs/architecture.svg`](docs/architecture.svg).
+FreeRTOS pipeline. Full diagram: [`architecture.svg`](architecture.svg).
 
 - **`ecg_sample_task`** (producer, 20 Hz, Core 1) — generates a simulated decimated ECG sample and pushes it into a queue
 - **`arrhythmia_decision_task`** (consumer, Core 1) — pulls samples from the queue and flags any reading above a threshold as an arrhythmia event
@@ -133,7 +133,7 @@ The web monitor (and serial monitor) are pinned to **Core 0** rather than Core 1
 
 WCET measurement is folded in from **App 2**'s Medical Pulse Monitor (`MEASURE_WCET`
 macro), applied to all four Core-1 tasks. Full table and reproduction steps in
-[`docs/task-table.md`](docs/task-table.md). Fill in from an actual Wokwi run — let it run
+[`task-table.md`](task-table.md). Fill in from an actual Wokwi run — let it run
 for at least a minute so the max column reflects real worst-case observations, not just
 a cold start.
 
@@ -145,7 +145,7 @@ a cold start.
 | `alert` (responder) | event-driven | 57331 us | — | 12 | — |
 
 Total utilization U = 0.0009 for `ecg_sample` (the only task with a true fixed period —
-see `docs/task-table.md` for the fuller schedulability discussion for the event-driven
+see `task-table.md` for the fuller schedulability discussion for the event-driven
 tasks). `ecg_sample`'s own timing is extremely lightweight and well-bounded (33 us mean,
 35 us max) — it's essentially just generating a value and enqueueing it.
 
@@ -165,7 +165,7 @@ blocking UART output from inside a time-sensitive task.
 
 ## Hazard analysis & standard mapping
 
-Full table in [`docs/hazard-analysis.md`](docs/hazard-analysis.md) — an educational risk
+Full table in [`hazard-analysis.md`](hazard-analysis.md) — an educational risk
 analysis (not a regulatory claim) mapping design decisions to the standards that would
 govern a real deployment (ISO 14971, IEC 62304, IEC 60601-1/-8). Highlights:
 
@@ -186,7 +186,7 @@ climb while `ecg_sample`'s heartbeat keeps incrementing normally.
 
 ## Build & run
 
-1. Open the Wokwi project (`Diaz-FINAL-RTS26Summer`) or clone `firmware/` locally with the ESP-IDF toolchain targeting ESP32-S3.
+1. Open the Wokwi project (`Diaz-FINAL-RTS26Summer`) or clone this repo locally with the ESP-IDF toolchain targeting ESP32-S3 (`main.c` and `diagram.json` are at the repo root).
 2. Default build (`USE_WEBSERVER 0`) runs entirely in Wokwi with no Wi-Fi — serial monitor prints queue depth, event bits, heartbeats, and the WCET evidence table once a second.
 3. To try the web monitor, set `USE_WEBSERVER 1`, fill in real `WIFI_SSID` / `WIFI_PASS` values, and rebuild — requires actual Wi-Fi hardware/credentials, not available in the Wokwi simulator.
 4. Press the "PATIENT ALERT" button to trigger the manual alert path and the App 3 latency benchmark; watch for the blue (WCET heartbeat) and red (arrhythmia alert) LEDs.
@@ -272,5 +272,5 @@ fold-ins from prior apps. Specifically, Claude helped:
   concurrency sequence diagram, and this README's structure.
 
 The latency measurements and debounce finding documented above are from my own Wokwi
-run, as required — Claude did not generate or fabricate those numbers as well for the WCET
-table.
+run, as required — Claude did not generate or fabricate those numbers, and the WCET
+table above still needs my own run's real values filled in.
