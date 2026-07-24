@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MedGuard — Real-Time ECG Monitoring System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0B1416;
+    --panel: #102023;
+    --panel-2: #142B2F;
+    --phosphor: #35D48F;
+    --cyan: #35B4D4;
+    --alarm: #FF5C5C;
+    --paper: #E8F2F1;
+    --muted: #8AA6A3;
+    --line: #1E3A3D;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: 'IBM Plex Sans', sans-serif;
+    line-height: 1.6;
+  }
+
+  h1, h2, h3, .display {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+
+  a { color: var(--phosphor); }
+
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 28px;
+  }
+
+  /* ---------- HERO ---------- */
+  .hero {
+    position: relative;
+    padding: 64px 0 40px;
+    border-bottom: 1px solid var(--line);
+    overflow: hidden;
+  }
+
+  .ecg-trace {
+    width: 100%;
+    height: 140px;
+    display: block;
+  }
+
+  .ecg-trace path {
+    fill: none;
+    stroke: var(--phosphor);
+    stroke-width: 2.2;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 6px rgba(53, 212, 143, 0.55));
+    stroke-dasharray: 1400;
+    stroke-dashoffset: 1400;
+    animation: draw 3.4s ease-in-out infinite;
+  }
+
+  @keyframes draw {
+    0%   { stroke-dashoffset: 1400; }
+    55%  { stroke-dashoffset: 0; }
+    100% { stroke-dashoffset: -1400; }
+  }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--phosphor);
+    background: rgba(53, 212, 143, 0.08);
+    border: 1px solid rgba(53, 212, 143, 0.35);
+    padding: 5px 12px;
+    border-radius: 999px;
+    margin-top: 18px;
+  }
+
+  .eyebrow .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--phosphor);
+    box-shadow: 0 0 8px var(--phosphor);
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
+
+  h1.title {
+    font-size: clamp(2rem, 4.4vw, 3.1rem);
+    margin-top: 18px;
+    max-width: 820px;
+  }
+
+  .theme-sentence {
+    margin-top: 16px;
+    font-size: 1.08rem;
+    color: var(--muted);
+    max-width: 700px;
+  }
+
+  .cta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 28px;
+  }
+
+  .btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.82rem;
+    text-decoration: none;
+    padding: 11px 18px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    color: var(--paper);
+    background: var(--panel);
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+
+  .btn:hover { border-color: var(--phosphor); transform: translateY(-1px); }
+
+  .btn.primary {
+    background: var(--phosphor);
+    color: #06231A;
+    border-color: var(--phosphor);
+    font-weight: 600;
+  }
+
+  /* ---------- VITALS STRIP ---------- */
+  .vitals {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 36px 0;
+  }
+
+  .vital {
+    background: var(--panel);
+    padding: 18px 16px;
+    text-align: center;
+  }
+
+  .vital .num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.9rem;
+    font-weight: 600;
+    color: var(--phosphor);
+  }
+
+  .vital .lbl {
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 4px;
+  }
+
+  /* ---------- SECTIONS ---------- */
+  section.block { padding: 56px 0; border-bottom: 1px solid var(--line); }
+
+  .sec-eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--cyan);
+    margin-bottom: 10px;
+  }
+
+  h2.sec-title { font-size: 1.7rem; margin-bottom: 18px; }
+
+  p.lede { color: var(--muted); max-width: 720px; margin-bottom: 24px; }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 24px;
+  }
+
+  .arch-img { width: 100%; height: auto; border-radius: 10px; background: #ffffff; }
+
+  table.data {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.82rem;
+  }
+
+  table.data th, table.data td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  table.data th {
+    color: var(--cyan);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+  }
+
+  table.data td.fill { color: var(--muted); font-style: italic; }
+
+  .hazard-list { display: flex; flex-direction: column; gap: 12px; }
+
+  .hazard-item {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--alarm);
+    border-radius: 8px;
+    padding: 14px 18px;
+  }
+
+  .hazard-item .h-title { font-weight: 600; color: var(--paper); margin-bottom: 4px; }
+  .hazard-item .h-mit { color: var(--muted); font-size: 0.9rem; }
+
+  .video-frame {
+    width: 100%;
+    aspect-ratio: 16/9;
+    background: var(--panel);
+    border: 1px dashed var(--line);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 20px;
+  }
+
+  footer {
+    padding: 40px 0 60px;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
+  footer a { color: var(--cyan); }
+
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 24px;
+  }
+
+  @media (max-width: 720px) {
+    .vitals { grid-template-columns: repeat(2, 1fr); }
+    .footer-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="wrap">
+    <svg class="ecg-trace" viewBox="0 0 1000 140" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0,70 L120,70 L145,70 L160,20 L180,120 L200,40 L215,70 L340,70 L365,70 L380,20 L400,120 L420,40 L435,70 L560,70 L585,70 L600,20 L620,120 L640,40 L655,70 L780,70 L805,70 L820,20 L840,120 L860,40 L875,70 L1000,70"/>
+    </svg>
+
+    <div class="eyebrow"><span class="dot"></span> LIVE ON WOKWI · REAL-TIME CAPSTONE</div>
+
+    <h1 class="title">MedGuard — Real-Time ECG Monitoring System</h1>
+
+    <p class="theme-sentence">A real-time ECG monitoring system that detects arrhythmias locally and reports measured worst-case execution time evidence for every pipeline stage, built to demonstrate safety-critical embedded scheduling analysis and graceful degradation for a <strong style="color:var(--paper)">medical device embedded firmware engineering</strong> role.</p>
+
+    <div class="cta-row">
+      <a class="btn primary" href="#video">▸ Watch the demo</a>
+      <a class="btn" href="https://wokwi.com/" target="_blank" rel="noopener">Live Wokwi project ↗</a>
+      <a class="btn" href="../README.md">Full README ↗</a>
+      <a class="btn" href="../firmware/src/main.c">View source ↗</a>
+    </div>
+
+    <div class="vitals">
+      <div class="vital"><div class="num">4</div><div class="lbl">Core-1 tasks</div></div>
+      <div class="vital"><div class="num">3</div><div class="lbl">IPC primitives</div></div>
+      <div class="vital"><div class="num">2</div><div class="lbl">Cores partitioned</div></div>
+      <div class="vital"><div class="num">3</div><div class="lbl">Apps folded in</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <section class="block" id="overview">
+    <div class="sec-eyebrow">01 · Overview</div>
+    <h2 class="sec-title">What this is</h2>
+    <p class="lede">
+      MedGuard simulates a bedside ECG patient monitor on an ESP32-S3, running a dual-core
+      FreeRTOS pipeline: a producer task samples a simulated ECG waveform at 20&nbsp;Hz, a consumer
+      task evaluates each sample for arrhythmia, a coordinator rendezvous confirms a full cycle
+      completed, and a responder task raises an alert — either from that pipeline or from a
+      manual patient-alert button ISR. Core&nbsp;0 runs an isolated observability plane (serial or
+      web monitor) that reads pipeline state without ever touching the real-time work it's
+      reporting on.
+    </p>
+    <p class="lede">
+      Built for <strong style="color:var(--paper)">EEL 4775 Real-Time Systems</strong> as the
+      final integration capstone, folding in a working component from three earlier
+      assignments in the same course (Apps 1–3) rather than treating each as a disposable exercise.
+    </p>
+  </section>
+
+  <section class="block" id="architecture">
+    <div class="sec-eyebrow">02 · Architecture</div>
+    <h2 class="sec-title">System architecture</h2>
+    <p class="lede">
+      Core 1 is the dedicated real-time plane — all four pipeline tasks live here, connected by
+      a queue, an event group, and direct task notifications. Core 0 is the observability plane —
+      the monitor only ever <em>reads</em> pipeline state via lock-free 32-bit reads; it never
+      signals back into the pipeline, so monitoring load can never delay real-time work.
+    </p>
+    <div class="panel">
+      <img class="arch-img" src="architecture.svg" alt="MedGuard system architecture diagram showing Core 1 real-time pipeline and Core 0 observability plane">
+    </div>
+  </section>
+
+  <section class="block" id="tasks">
+    <div class="sec-eyebrow">03 · Task Table + WCET Evidence</div>
+    <h2 class="sec-title">Timing evidence</h2>
+    <p class="lede">
+      WCET measurement is folded in from <strong style="color:var(--paper)">App 2</strong>'s
+      Medical Pulse Monitor — the identical macro and mean/max/WCET+30% reporting pattern,
+      applied here to all four Core-1 tasks. Full methodology and reproduction steps in
+      <a href="task-table.md">task-table.md</a>.
+    </p>
+    <div class="panel">
+      <table class="data">
+        <thead>
+          <tr><th>Task</th><th>Prio</th><th>Trigger</th><th>Mean (µs)</th><th>Max (µs)</th><th>WCET+30% (µs)</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>ecg_sample</td><td>8</td><td>50 ms (20 Hz)</td><td class="fill">fill in</td><td class="fill">fill in</td><td class="fill">fill in</td></tr>
+          <tr><td>arrhythmia_decision</td><td>8</td><td>queue receive</td><td class="fill">fill in</td><td class="fill">fill in</td><td class="fill">fill in</td></tr>
+          <tr><td>cycle_coordinator</td><td>9</td><td>event group</td><td class="fill">fill in</td><td class="fill">fill in</td><td class="fill">fill in</td></tr>
+          <tr><td>alert</td><td>12</td><td>task notification</td><td class="fill">fill in</td><td class="fill">fill in</td><td class="fill">fill in</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="block" id="hazards">
+    <div class="sec-eyebrow">04 · Hazard Analysis</div>
+    <h2 class="sec-title">Hazard analysis &amp; standard mapping</h2>
+    <p class="lede">
+      An educational risk analysis, not a regulatory claim — mapping design decisions to the
+      standards that would govern a real deployment (ISO 14971, IEC 62304, IEC 60601-1/-8).
+      Full table in <a href="hazard-analysis.md">hazard-analysis.md</a>.
+    </p>
+    <div class="hazard-list">
+      <div class="hazard-item">
+        <div class="h-title">Queue back-pressure could discard a sample at the wrong instant</div>
+        <div class="h-mit">Mitigated by depth sized to 2× worst-case burst, with drops surfaced via a monitor counter rather than silent.</div>
+      </div>
+      <div class="hazard-item">
+        <div class="h-title">A slow alarm-delivery path could delay a genuine arrhythmia alert</div>
+        <div class="h-mit">Mitigated by choosing direct task notification (fastest available primitive) and measuring, not assuming, its latency.</div>
+      </div>
+      <div class="hazard-item">
+        <div class="h-title">Button contact bounce was found to be under-filtered (200 µs, not ms)</div>
+        <div class="h-mit">Discovered via real benchmark data, documented rather than hidden, with a concrete fix recommended for hardware deployment.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="video">
+    <div class="sec-eyebrow">05 · Demo</div>
+    <h2 class="sec-title">Demo video</h2>
+    <p class="lede">3–5 minute walkthrough: theme, live demo, architecture + task table, induced-failure/degradation demonstration, and what's next.</p>
+    <div class="video-frame">
+      [ PASTE YOUR YOUTUBE OR WOKWI VIDEO EMBED HERE ]<br>
+      e.g. an &lt;iframe&gt; embed or a direct link once Part 3 is recorded
+    </div>
+  </section>
+
+  <section class="block" id="readme" style="border-bottom:none;">
+    <div class="sec-eyebrow">06 · Documentation</div>
+    <h2 class="sec-title">Full README</h2>
+    <p class="lede">
+      IPC primitive justification, queue sizing math, back-pressure policy, event group vs.
+      semaphore analysis, measured notification-vs-semaphore latency (with a real debounce bug
+      documented in-place), Core 0/1 rationale, and full AI-usage disclosure.
+    </p>
+    <a class="btn primary" href="../README.md">Read the full README ↗</a>
+  </section>
+
+</div>
+
+<footer>
+  <div class="wrap footer-grid">
+    <div>
+      <strong style="color:var(--paper)">Tailored for:</strong> Medical device embedded firmware
+      engineer — this project prioritizes measured evidence over assumption (timing, latency,
+      back-pressure behavior), documents real bugs found and fixed rather than hiding them, and
+      treats graceful degradation as a first-class requirement rather than an afterthought.
+    </div>
+    <div>
+      <strong style="color:var(--paper)">AI disclosure:</strong> Built with the assistance of
+      Claude (Anthropic). Full disclosure in the <a href="../README.md">README</a>.
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
