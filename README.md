@@ -1,54 +1,43 @@
-# MedGuard — Final Capstone: Real-Time ECG Monitoring System
+# MedGuard — Real-Time Systems Final Capstone
 
 **Course:** EEL 4775 Real-Time Systems — Final Integration Capstone
-**Wokwi project:** [PASTE YOUR WOKWI URL HERE — should be named `<LASTNAME>-FINAL-RTS26Summer`]
+**Wokwi project:** [Diaz-FINAL-RTS26Summer](https://wokwi.com/projects/470273216543239169)
+**Portfolio site:** [PASTE YOUR GITHUB PAGES URL HERE — `https://<username>.github.io/<repo>`]
 
-## Capstone Step 1 — Integration
+## One sentence
 
-**Target role:** Medical device embedded firmware engineer
+A real-time ECG monitoring system that detects arrhythmias locally and reports measured
+worst-case execution time evidence for every pipeline stage, built to demonstrate
+safety-critical embedded scheduling analysis and graceful degradation for a **medical
+device embedded firmware engineering** role.
 
-**Theme (one sentence):** A real-time ECG monitoring system that detects arrhythmias
-locally and reports measured worst-case execution time evidence for every pipeline
-stage, built to demonstrate safety-critical embedded scheduling analysis and graceful
-degradation for a medical device embedded firmware engineering role.
+## Demo
 
-**Integrated capability (folded in from a prior app):** App 5 (this system) serves as
-the spine. Folded in from **App 2**: the `MEASURE_WCET` timing macro and mean/max/
-WCET+30% reporting pattern from App 2's Medical Pulse Monitor, applied to all four
-Core-1 tasks (`ecg_sample`, `arrhythmia_decision`, `cycle_coordinator`, `alert`) — this
-directly produces the **Task table + WCET evidence** required for the capstone
-portfolio site, which nothing in the base App 5 scaffold provided on its own.
+- Video: [PASTE YOUR YOUTUBE / WOKWI VIDEO LINK HERE — Part 3]
+- Live Wokwi: [Diaz-FINAL-RTS26Summer](https://wokwi.com/projects/470273216543239169)
+- Portfolio site: `docs/index.html` (this repo, served via GitHub Pages)
 
-**Graceful degradation (used in the demo):** the producer's queue back-pressure policy
-already implements this — if `data_q` fills (the consumer stalls or falls behind), the
-producer does not block waiting for space, and it does not silently drop the newest
-reading either. It discards the *oldest* queued sample to make room for the current
-one, incrementing `dropped_samples`, so local ECG sampling continues at its full 20 Hz
-rate no matter what the consumer is doing. This is the degradation path to demonstrate
-live in the capstone video (e.g., by artificially stalling `arrhythmia_decision_task`
-to force the queue to fill and watching `dropped_samples` climb while `ecg_sample`'s
-heartbeat keeps incrementing normally).
+## Architecture
 
-## Theme
+MedGuard simulates a bedside ECG patient monitor on an ESP32-S3, running a dual-core
+FreeRTOS pipeline. Full diagram: [`docs/architecture.svg`](docs/architecture.svg).
 
-MedGuard's App 5 simulates a simplified ECG monitoring pipeline running entirely on Core 1, observed from Core 0:
+- **`ecg_sample_task`** (producer, 20 Hz, Core 1) — generates a simulated decimated ECG sample and pushes it into a queue
+- **`arrhythmia_decision_task`** (consumer, Core 1) — pulls samples from the queue and flags any reading above a threshold as an arrhythmia event
+- **`cycle_coordinator_task`** (Core 1) — waits, via an event group, for both "sample produced" and "sample processed" to be true for the current cycle, then notifies the alert task
+- **`alert_task`** (responder, Core 1) — wakes via direct task notification (from the coordinator, or from a manual patient-alert button ISR) and logs either a routine cycle-complete tick or an arrhythmia alert
+- **Core 0** runs an isolated observability plane — a serial monitor (default) or a web monitor (optional), printing queue depth, event bits, dropped-sample count, per-task heartbeats, and WCET evidence, all read via lock-free 32-bit reads that never signal back into the Core 1 pipeline
 
-- **`ecg_sample_task`** (producer, 20 Hz) — generates a simulated decimated ECG sample and pushes it into a queue
-- **`arrhythmia_decision_task`** (consumer) — pulls samples from the queue and flags any reading above a threshold as an arrhythmia event
-- **`cycle_coordinator_task`** — waits (via an event group) for both "sample produced" and "sample processed" to be true for the current cycle, then notifies the alert task
-- **`alert_task`** (responder) — wakes via direct task notification (from the coordinator, or from a manual patient-alert button ISR) and logs either a routine cycle-complete tick or an arrhythmia alert
-- **Core 0** runs an observability plane — a serial monitor (default) or a web monitor (optional deliverable), printing queue depth, event bits, dropped-sample count, and per-task heartbeats
+### Hardware indicators
 
-## Hardware indicators
+Two physical LEDs give an at-a-glance status view, independent of reading the serial log:
 
-Two physical LEDs give an at-a-glance status view, independent of reading the serial log — useful for the demo video:
+- **Blue LED (GPIO 2)** — flashes once every time the WCET evidence table is printed. A simple "the monitor is alive and reporting" heartbeat.
+- **Red LED (GPIO 4)** — flashes once every time `alert_task` raises a genuine arrhythmia alert (not routine cycle-complete ticks).
 
-- **Blue LED (GPIO 2)** — flashes once every time the WCET evidence table is printed (once a second in the serial monitor; once per page load in the web monitor). A simple "the monitor is alive and reporting" heartbeat.
-- **Red LED (GPIO 4)** — flashes once every time `alert_task` raises a genuine arrhythmia alert (not routine cycle-complete ticks). Lets a viewer see an alarm event happen on hardware, in sync with the `*** ARRHYTHMIA ALERT ***` log line.
+Both are implemented as a deliberate **on → brief hold → off pulse**, not a state toggle — see the build notes near the end of this README for why that distinction mattered.
 
-Both are implemented as a deliberate **on → brief hold → off pulse**, not a toggle — see the build note below for why that distinction actually mattered here.
-
-## 1. IPC primitive role justification
+### IPC primitive role justification
 
 | Primitive | Role | Why this primitive |
 |---|---|---|
@@ -56,7 +45,7 @@ Both are implemented as a deliberate **on → brief hold → off pulse**, not a 
 | Event group (`evt_group`) | Rendezvous between producer, consumer, and coordinator | The coordinator needs to know that *both* "a new sample was produced" AND "that sample was evaluated" have happened before treating the cycle as complete — a multi-condition rendezvous, which is exactly what an event group is for. A queue or notification alone can't express "wait for both of these independent things." |
 | Direct task notification (`xTaskNotifyGive` / `ulTaskNotifyTake`) | Coordinator → alert task, and button ISR → alert task | Exactly one receiving task (the alert task), from two different senders (the coordinator task and the button ISR). This is the single fastest primitive available — no separate kernel object, no queue traversal — appropriate for both a per-cycle tick and a manual alert button where responsiveness matters. |
 
-## 2. Queue sizing — the math
+### Queue sizing — the math
 
 **Chosen size:** depth 8, item size `sizeof(ecg_sample_t)` (8 bytes: a `uint32_t` timestamp + an `int` reading).
 
@@ -66,7 +55,7 @@ Both are implemented as a deliberate **on → brief hold → off pulse**, not a 
 - Worst-case backlog during that stall: 200 ms ÷ 50 ms = **4 samples**.
 - Chosen depth of **8** gives a 2x safety margin above that computed worst case, absorbing normal scheduling jitter without growing the queue arbitrarily large (which would just hide backlog rather than surface it).
 
-## 3. Back-pressure policy — drop oldest, keep newest
+### Back-pressure policy — drop oldest, keep newest
 
 When `xQueueSend` fails (queue full), the producer discards the **oldest** queued sample to make room for the sample it just captured, rather than:
 - **Blocking the producer** — this would stall real-time sampling, which is unacceptable for a periodic 20 Hz sensor task.
@@ -74,7 +63,7 @@ When `xQueueSend` fails (queue full), the producer discards the **oldest** queue
 
 Every drop increments a `dropped_samples` counter, surfaced in both the serial and web monitors, so back-pressure activity is observable rather than silent.
 
-## 4. Event group vs. N semaphores
+### Event group vs. N semaphores
 
 An event group is the better fit here because the coordinator's condition is inherently a **multi-bit AND** ("wait until BOTH the produced bit and the processed bit are set"), evaluated together and cleared together atomically on exit (`pdTRUE` clear-on-exit in `xEventGroupWaitBits`). Implementing the same rendezvous with two separate counting/binary semaphores would require either:
 - Taking both semaphores in sequence (introducing an artificial ordering dependency that doesn't actually exist between "produced" and "processed"), or
@@ -82,7 +71,7 @@ An event group is the better fit here because the coordinator's condition is inh
 
 N semaphores would be the better choice instead of an event group only in a scenario where the conditions are truly independent resources being acquired one at a time (e.g., a counting semaphore for a pool of N interchangeable resources) rather than a set of distinct named conditions that must jointly hold — which is not this case.
 
-## 5. Direct notification vs. binary semaphore — measured latency
+### Direct notification vs. binary semaphore — measured latency
 
 The latency comparison is implemented directly in `main.c`, ported from **App 3**'s
 `button_isr` / `btn_task_sem` / `btn_task_notif` pattern: pressing the "PATIENT ALERT"
@@ -132,7 +121,7 @@ signals into one, while a binary semaphore delivers (and a task can observe) eac
 individual signal — a real, non-obvious tradeoff between the two primitives beyond raw
 speed, and one this benchmark surfaced by accident rather than by design.
 
-## 6. Engineering analysis — why pin the web monitor to Core 0?
+### Why pin the web monitor to Core 0?
 
 The web monitor (and serial monitor) are pinned to **Core 0** rather than Core 1 because:
 - Core 1 is the dedicated real-time plane running all four pipeline tasks (producer, consumer, coordinator, alert) at priorities 8–12 — introducing a Wi-Fi stack and HTTP server onto that same core risks preempting or delaying time-sensitive pipeline work, especially since Wi-Fi/lwIP processing is not typically priority-managed the same way application tasks are.
@@ -140,20 +129,68 @@ The web monitor (and serial monitor) are pinned to **Core 0** rather than Core 1
 
 **What would go wrong on Core 1:** the monitor task, the HTTP server's internal processing, and lwIP's networking tasks would all compete directly with the ECG pipeline for the same core's CPU time. Under load (e.g., many simultaneous HTTP requests, or Wi-Fi retransmissions), this could delay the producer's 20 Hz timing, the consumer's queue draining, or the coordinator's rendezvous — turning an observability feature into a source of the very timing problems this pipeline is supposed to avoid. Keeping the monitor on Core 0 means a burst of monitor/network activity cannot directly steal cycles from the real-time pipeline.
 
-## Task Table + WCET Evidence
+## Tasks & timing (WCET evidence)
 
-*(Required capstone portfolio deliverable — fill in after running in Wokwi. Values come
-from the WCET table both monitors print once a second; let it run for at least a minute
-so the max column reflects real worst-case observations, not just a cold start.)*
+WCET measurement is folded in from **App 2**'s Medical Pulse Monitor (`MEASURE_WCET`
+macro), applied to all four Core-1 tasks. Full table and reproduction steps in
+[`docs/task-table.md`](docs/task-table.md). Fill in from an actual Wokwi run — let it run
+for at least a minute so the max column reflects real worst-case observations, not just
+a cold start.
 
-| Task | Core | Priority | Period/Trigger | Mean (us) | Max (us) | WCET+30% (us) |
-|---|---|---|---|---|---|---|
-| `ecg_sample` (producer) | 1 | 8 | 50 ms (20 Hz) | *[fill in]* | *[fill in]* | *[fill in]* |
-| `arrhythmia_decision` (consumer) | 1 | 8 | event-driven (queue receive) | *[fill in]* | *[fill in]* | *[fill in]* |
-| `cycle_coordinator` | 1 | 9 | event-driven (event group) | *[fill in]* | *[fill in]* | *[fill in]* |
-| `alert` (responder) | 1 | 12 | event-driven (task notification) | *[fill in]* | *[fill in]* | *[fill in]* |
+| Task | Period T | WCET C | U=C/T | Priority | Deadline |
+|---|---:|---:|---:|---:|---:|
+| `ecg_sample` (producer) | 50 ms | *[fill in]* | *[fill in]* | 8 | 50 ms |
+| `arrhythmia_decision` (consumer) | event-driven | *[fill in]* | — | 8 | — |
+| `cycle_coordinator` | event-driven | *[fill in]* | — | 9 | — |
+| `alert` (responder) | event-driven | *[fill in]* | — | 12 | — |
 
-## Build note — LED toggle vs. pulse (and protecting the WCET data)
+Total utilization U = *[fill in]* (only `ecg_sample` has a true fixed period; see
+`docs/task-table.md` for the fuller schedulability discussion for the event-driven tasks).
+
+## Hazard analysis & standard mapping
+
+Full table in [`docs/hazard-analysis.md`](docs/hazard-analysis.md) — an educational risk
+analysis (not a regulatory claim) mapping design decisions to the standards that would
+govern a real deployment (ISO 14971, IEC 62304, IEC 60601-1/-8). Highlights:
+
+- **Queue back-pressure** could discard a sample at the wrong instant → mitigated by depth sized to 2x worst-case burst, with drops surfaced via a monitor counter rather than silent.
+- **Slow alarm-delivery path** could delay a genuine arrhythmia alert → mitigated by choosing direct task notification (fastest available primitive) and measuring, not assuming, its latency.
+- **Button contact bounce** was found to be under-filtered (200 µs, not ms) → discovered via real benchmark data, documented rather than hidden, with a concrete fix recommended for hardware deployment.
+
+## Graceful degradation
+
+The producer's queue back-pressure policy is the graceful-degradation path for this
+system: if `data_q` fills (the consumer stalls or falls behind), the producer does not
+block waiting for space, and it does not silently drop the newest reading either. It
+discards the *oldest* queued sample to make room for the current one, incrementing
+`dropped_samples`, so local ECG sampling continues at its full 20 Hz rate no matter what
+the consumer is doing. Demonstrated live by artificially stalling
+`arrhythmia_decision_task` to force the queue to fill and watching `dropped_samples`
+climb while `ecg_sample`'s heartbeat keeps incrementing normally.
+
+## Build & run
+
+1. Open the Wokwi project (`<LASTNAME>-FINAL-RTS26Summer`) or clone `firmware/` locally with the ESP-IDF toolchain targeting ESP32-S3.
+2. Default build (`USE_WEBSERVER 0`) runs entirely in Wokwi with no Wi-Fi — serial monitor prints queue depth, event bits, heartbeats, and the WCET evidence table once a second.
+3. To try the web monitor, set `USE_WEBSERVER 1`, fill in real `WIFI_SSID` / `WIFI_PASS` values, and rebuild — requires actual Wi-Fi hardware/credentials, not available in the Wokwi simulator.
+4. Press the "PATIENT ALERT" button to trigger the manual alert path and the App 3 latency benchmark; watch for the blue (WCET heartbeat) and red (arrhythmia alert) LEDs.
+
+## Tailored for
+
+**Medical device embedded firmware engineer.** Every major decision in this project
+prioritizes measured evidence over assumption — queue sizing from worst-case burst math,
+notification-vs-semaphore latency from an actual benchmark (not a spec sheet claim), and
+WCET evidence gathered rather than guessed. Real bugs found during development (a macro
+argument-count compile error, an LED toggle-vs-pulse mismatch, an under-filtered button
+debounce) are documented in place rather than silently fixed and hidden, which is the
+same instinct a safety-relevant embedded role requires: a system's real behavior matters
+more than its intended behavior, and both need to be checked.
+
+---
+
+## Build notes (bugs found and fixed during development)
+
+### LED toggle vs. pulse (and protecting the WCET data)
 
 The two status LEDs were initially implemented as a **state toggle** (flip on, flip
 off, flip on...) rather than a pulse. That's a subtle but real bug: a toggle only
@@ -171,7 +208,7 @@ duration, corrupting exactly the evidence this fold-in from App 2 is supposed to
 produce. A local `bool this_was_an_alarm` flag carries the decision out of the timed
 block so the pulse can happen afterward without touching the measurement.
 
-## Build note — a real macro bug worth documenting
+### A real macro bug worth documenting
 
 While wiring up the App 2 `MEASURE_WCET` macro, `ecg_sample_task` initially failed to
 compile with `macro "MEASURE_WCET" passed 6 arguments, but takes just 4`. Root cause:
